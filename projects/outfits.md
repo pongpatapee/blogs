@@ -76,21 +76,25 @@ this over writing raw SQL code for the following reasons:
   and allows us to isolate it to its own transaction, which allows for rollback
   on any failures.
 
-### Scalability
+### Scalability (Performance Considerations)
 
-TODO: finish the rest
+We primarily focused on optimizing for read speeds. Which were done in two ways: fanout-on-write timeline and server-sided cache with Redis.
 
-#### Performance Considerations
-
-We mainly focused on optimizing for read speeds. Which were done in two ways.
-
-##### Fanout on write
+#### Fanout-On-Write Timeline
 
 When designing a user timeline for a social media app.
 
-- Fan out on write
-- Server-sided cache (Redis)
-  - Cache aside strategy
+#### Server-Sided Cache (Redis)
+
+One of the standard ways to improve read performance in a system design is to introduce a cache. Redis is the most popular server-sided cache and is used as a layer between the server and the DB.
+
+There are quite a few caching strategies, such as _cache-aside_, _read-through_, and _write_through_. We chose to use the **cache-aside** strategy also known as the _lazy-loading_ strategy.
+
+The **cache-aside** strategy reads from the cache, on a cache miss event, the application reads from the database and updates the cache. It's very similar to the _read-through_ strategy, except instead of the cache querying the db and updating the itself, the application handles the db query and cache update logic.
+
+The reason we chose this strategy is because to only cache _hot_ or frequently read data. There is no need to update the cache on a write event, because that write event could belong to a user with very few followers, not many reads will come through for their posts. We want to **maximize** our **cache hits** so we only cache data users are currently actively engaging with.
+
+
 
 ### Project setup
 
@@ -119,3 +123,7 @@ When designing a user timeline for a social media app.
 
 - Model conversion. Translating between DB models and Pydantic models was a big
   challenge.
+
+
+
+<!-- TODO: add graphics -->
