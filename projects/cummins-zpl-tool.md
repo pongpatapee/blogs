@@ -36,3 +36,56 @@ directly, the requests would be rejected.
 
 Since we can't adjust CORS on the Zebra printers directly, we need a simple
 proxy server to forward our requests to by pass the CORS issue.
+
+## Web Client
+
+The web client needs to make multiple API calls. It's best to make them all at
+once rather than sequentially. To do so we can utilize `Promise.all` or
+`Promise.allSettled`.
+
+Instead of doing something like:
+
+```js
+for (const printer of printerIPs) {
+  await someAPICallFunction(printer);
+}
+```
+
+You can do:
+
+```js
+const requests = printerIPs.map((printer) => someAPICallFunction(printer));
+const results = await Promise.allSettled(requests);
+```
+
+Doing it like this makes the API calls concurrent and we don't have to wait on
+the result of one call to make the next.
+
+The issue arises when we need to update the state of the API calls.
+
+How do we let the user know the progress of the upload like?
+![zpl upload progress](/assets/cummins-zpl-tool/upload_progress.png)
+
+To do so, we need to pass a callback to our API call function, so it can update
+the progress of our uploads.
+
+```js
+// pseudo code
+
+function updateCallback(status) {
+  setUploadProgress(status);
+}
+
+const requests = printerIPs.map((printer) =>
+  someAPICallFunction(printer, updateCallBack),
+);
+const results = await Promise.allSettled(requests);
+
+async function someAPICallFunction(printer, updateCallBack) {
+  for (const file of files) {
+    updateCallBack("loading ", file);
+    const response = someAPILogic(printer, file);
+  }
+  updateCallBack("success");
+}
+```
